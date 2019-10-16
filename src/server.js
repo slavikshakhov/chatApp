@@ -17,7 +17,7 @@ io.on('connection', (socket) => {
             cb({error: 'username is taken', user: null});
         }
         else {
-            cb({error: 'no error', user: {name, id: uuid(), socketID: socket.id}});
+            cb({error: '', user: {name, id: uuid(), socketID: socket.id}});
         }
     });
     socket.on('USER_TO_USERS', (user) => {
@@ -28,9 +28,10 @@ io.on('connection', (socket) => {
         io.emit('USERS', users);
     });
     socket.on('MESSAGE', (message, user, isPublic, receiver = null) => {
-        const messageObj = {message, sender: user, id: uuid(), time: getTime(new Date(Date.now()))};
-        isPublic? messages.push(messageObj) : privateMessages.push(messageObj);
-        isPublic ? io.emit('MESSAGES', messages) : socket.broadcast.to(receiver.socketID).emit('MESSAGES', privateMessages);        
+        const messageObj = {message, isPublic, sender: user, receiver, id: uuid(), time: getTime(new Date(Date.now()))};        
+        // eslint-disable-next-line no-unused-expressions
+        isPublic ? io.emit('MESSAGE', messageObj) :
+                 (socket.broadcast.to(receiver.socketID).emit('MESSAGE', messageObj), socket.emit('MESSAGE', messageObj))        
     });
     socket.on('TYPING', (isTyping, isPublic, user, receiver) => {
         if(isTyping && isPublic){          

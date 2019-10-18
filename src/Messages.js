@@ -1,4 +1,6 @@
 import React, {Component} from 'react';
+import './Popup.css';
+
 
 
 
@@ -7,15 +9,15 @@ export default class Messages extends Component {
         super();
         this.state = {}
     }    
-    printPublicMessages = () => {
-        const {publicMessages, user} = this.props;
+    printPublicMessages = (publicMessages) => {
+        const {user} = this.props;
         const publicMes = publicMessages ? 
                 publicMessages.map((mes, i) => {                   
                     console.log(mes);
                     console.log(mes.time);        
                     return (
                         <div key={i} className={(user && mes.sender) && user.name === mes.sender.name ? 'red f5 ph3 pv2' : ''}>
-                            <div>Message from {mes.sender.name[0].toUpperCase() + mes.sender.name.slice(1)} to {mes.receiver.name} <span>sent at {mes.time}</span></div>            
+                            <div>Message from {mes.user.name[0].toUpperCase() + mes.user.name.slice(1)} to All <span>sent at {mes.time}</span></div>            
                             <div className='fw6'>{mes.message}</div>             
                         </div>
                     )
@@ -23,6 +25,8 @@ export default class Messages extends Component {
                 }) : null;
        return publicMes;
     }
+    /*
+
     printPrivateMessages = () => {
         const {privateMessages, user} = this.props;  
         let grouppedMessages = {};             
@@ -59,19 +63,42 @@ export default class Messages extends Component {
         return privateMessagesBySender;
     }   
     
-    render(){               
+    */
+   //activePrivateMessages is array of messages related to the sender (user) with corresponding private receivers
+   printPrivateMessagesOfActiveReceiver = (activePrivateMessages) => {   
+       console.log(activePrivateMessages);
+       return activePrivateMessages.map(mes => {
+           return (
+               <div key={mes.id}>
+                   <div>{mes.message}</div><span className='ml3 green'>Sent at {mes.time}</span>
+               </div>
+           )
+       })
+   }
+    render(){   
+        const {publicMessages, privateMessages, activePrivateMessages, oppositeChatter, popup} = this.props;  
+         console.log(publicMessages, privateMessages, activePrivateMessages, oppositeChatter);
+         const popupClass = popup ? 'popup' : '';
+         const classes = `tc fw3 f5 ttu ${popupClass}`;
+
+         let publMes = !publicMessages ? null : publicMessages.length > 0 ? this.printPublicMessages(publicMessages) : null;
         return (
-            <div className='w-100 h-100 bg-yellow flex'>
-                <div className='bg-light-blue w-50'>
+            
+            <div className='w-100 h-100 bg-yellow flex'>                
+                    <div className='bg-light-blue w-50'>
                     <div className='tc fw3 f5 ttu'><span className='fw5 f3'>public Messages</span> Sent to All Logged in Users</div>
-                    <div className='pv4'>{this.printPublicMessages()}</div>
-                </div>                 
-                <div className='bg-yellow w-50'>
-                    <div className='tc fw3 f5 ttu'><span className='fw5 f3'>Private Messages</span> with Selected Logged In Users
-                             {!this.props.privateMessages && <p>{`Empty now`}</p>}
-                    </div>
-                    <div>{this.printPrivateMessages()}</div>                
-                </div>
+                    {publMes}                    
+                </div>   
+                
+                {activePrivateMessages.length > 0 && 
+                    <div className='bg-yellow w-50'>
+                    <div className={classes}><span className='fw5 f3'>Private Messages with {oppositeChatter.name}</span> 
+                            <div>{ this.printPrivateMessagesOfActiveReceiver(activePrivateMessages) }</div>                                                     
+                    </div> 
+                           
+                </div>                
+                }              
+                
             </div>
         )
     }

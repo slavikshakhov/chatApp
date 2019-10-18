@@ -3,12 +3,27 @@ const app = require('http').createServer();
 const io = require('socket.io')(app);
 const uuid = require('uuid/v4');
 
-
 let users = {};
-let messages = [];
+let publicMessages = [];
 let privateMessages = [];
 
+//input - logged in user (sender), push obj to arr only if this obj's name same;
+//[{message, receiver, isPublic, user, id, time}, {......}] -> {[user.name]: [{message, receiver, isPublic, user, id, time}]}
+   //returns object of all users with their corresponding arrays of values
+const allMessages = (user) => {      
+    return privateMessages.reduce((acc, obj) => { 
+        if(obj.user.name === user.name){
+            acc[user.name] = (acc[user.name] || []).concat(obj); 
+        }                          
+        return acc;            
+    }, {});        
+}
 
+//{[user.name]: [{message, receiver, isPublic, user, id, time}]} -> return only one user's info (sender now)
+const userMessages = (allUsersMessages, userName) => {
+   return allUsersMessages[userName];
+
+}
 
 io.on('connection', (socket) => {
     console.log(socket.id);
@@ -24,14 +39,30 @@ io.on('connection', (socket) => {
         const allUsers = Object.assign({}, users);
         allUsers[user.name] = user;
         users = allUsers;
-        console.log(users);
+        //console.log(users);
         io.emit('USERS', users);
     });
-    socket.on('MESSAGE', (message, user, isPublic, receiver = null) => {
-        const messageObj = {message, isPublic, sender: user, receiver, id: uuid(), time: getTime(new Date(Date.now()))};        
+    socket.on('MESSAGE', (message, user, isPublic, receiver) => {
+        const messageObj = {
+             message, receiver, isPublic, user, id: uuid(), time: getTime(new Date(Date.now()))
+        }; 
+        isPublic ? publicMessages.push(messageObj) : privateMessages.push(messageObj);
+        
+        //get object, where keys are sender's name and values are array of messages of this sender to private receivers
+        const allUsersMessages = allMessages(user);  
+        //console.log(allUsersMessages);      
+       
+        //get array of messages of this sender to private receivers
+        const thisUserMessages = userMessages(allUsersMessages, user.name);         
+        console.log(thisUserMessages, isPublic, receiver);
+
+        //send to client (sender and receiver) array of messages of this user if private (!isPublic) 
+        //and to all clients (sender and allreceivers) if public
+        //last argument in 'MESSAGE' event is popup, if true, the popup will appear when messages displayed
+
         // eslint-disable-next-line no-unused-expressions
-        isPublic ? io.emit('MESSAGE', messageObj) :
-                 (socket.broadcast.to(receiver.socketID).emit('MESSAGE', messageObj), socket.emit('MESSAGE', messageObj))        
+        isPublic ? io.emit('MESSAGE', publicMessages, isPublic, null, false) :
+                 (socket.broadcast.to(receiver.socketID).emit('MESSAGE', thisUserMessages, isPublic, user, true), socket.emit('MESSAGE', thisUserMessages, isPublic, receiver, false))    
     });
     socket.on('TYPING', (isTyping, isPublic, user, receiver) => {
         if(isTyping && isPublic){          

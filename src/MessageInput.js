@@ -27,6 +27,11 @@ export default class MessageInput extends Component {
         console.log(this.state.message);    
         setTyping(isTyping);    
     }
+    submitText = e => {
+        if(e.keyCode === 13) {
+          this.onMessageSubmit(e);
+        }
+      }
     render() {
         const {errors} = this.state;
         const {userError} = this.props;
@@ -41,9 +46,11 @@ export default class MessageInput extends Component {
         const classes = errors.length > 0 ? 'bg-red' : '';
         return (
             <div className='h4 tc bg-grey'>
-                <form className='w-100 flex flex-row' onSubmit={this.onMessageSubmit}>                    
-                    <textarea className='w-100 h4 mr2' id='message' placeholder='Enter your message here' ref={(input) => { this.textInput = input}} onChange={this.onMessageChange} value={this.state.message} />
-                    <input type='submit' value='Send' />
+                <form className='w-100 flex flex-row'>                    
+                    <textarea className='w-100 h4 mr2' id='message' placeholder='Enter your message here' 
+                            ref={(input) => { this.textInput = input}} onChange={this.onMessageChange} value={this.state.message}
+                            onKeyDown={this.submitText} />
+                    {/* <input type='submit' value='Send' /> */}                    
                 </form>
                 <div className={classes}>{mappedErrors}</div>
             </div>

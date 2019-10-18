@@ -6,8 +6,8 @@ import Messages from './Messages';
 export default class ChatSection extends Component {
     constructor(){
         super();
-        this.state = {users: null, receiver: {name: 'all'}, isPublic: true, error: '', 
-            publicMessages: [], privateMessages: [], typer: null, isTyping: false}
+        this.state = {users: null, receiver: null, oppositeChatter: null, publicMessages: null, privateMessages: null, activePrivateMessages: [], 
+                        isPublic: true, error: '', typer: null, isTyping: false, popup: false}
     }
     componentWillMount(){        
         this.initSocket(this.props.socket);        
@@ -17,15 +17,15 @@ export default class ChatSection extends Component {
           console.log(users);
           this.setState({users});
         });     
-        socket.on('MESSAGE', (messageObj) => {
-           if(messageObj.isPublic){
-               const publicMessages = [...this.state.publicMessages, messageObj];
-               this.setState({publicMessages})
-           }
-           else {
-            const privateMessages = [...this.state.privateMessages, messageObj];            
-            this.setState({privateMessages})
-           }
+
+        //oppositeChatter is receiver if this user is sender, and is user if it received message from the user
+        //popup will be true for the receiver, not sender
+        socket.on('MESSAGE', (messages, isPublic, oppositeChatter, popup) => { 
+           console.log(messages);           
+           console.log(isPublic); 
+           console.log(popup);            
+           isPublic ? this.setState({publicMessages: messages}) :
+                 this.setState({activePrivateMessages: messages, oppositeChatter, popup});        
         }                         
         );
         socket.on('TYPING', (isTyping, typer) => {      
@@ -34,13 +34,15 @@ export default class ChatSection extends Component {
     }
     setReceiver = (receiver) => {        
         this.setState({receiver, isPublic: false});
+        console.log(receiver);
     }
     setPublicChat = () => {
-        this.setState({receiver: {name: 'all'}, isPublic: true});
+        this.setState({ receiver: null, isPublic: true});
     }
     setMessage = (message) => {
         const {socket, user} = this.props;
-        const {isPublic, receiver} = this.state;               
+        const {isPublic, receiver} = this.state;     
+        console.log(isPublic, receiver);
         if(user){ 
           socket.emit('MESSAGE', message, user, isPublic, receiver);          
          }         
@@ -53,11 +55,13 @@ export default class ChatSection extends Component {
         const {socket, user} = this.props;
         const {isPublic, receiver} = this.state;
         socket.emit('TYPING', isTyping, isPublic, user, receiver);    
-      }
+    }
+    
+    
     render() {
-        const {users, receiver, error, publicMessages, privateMessages, isPublic} = this.state;
+        const {users, oppositeChatter, error, publicMessages, privateMessages, activePrivateMessages, isPublic, popup} = this.state;
         const {user} = this.props;
-        console.log(receiver);
+        console.log(activePrivateMessages, publicMessages, privateMessages, oppositeChatter, popup, isPublic);
         return (
             <div>
                 <div className='f4 fw6 ma5 tc red'>Your are logged in as {user && user.name}</div>
@@ -66,7 +70,8 @@ export default class ChatSection extends Component {
                     <Users users={users} user={user} setReceiver={this.setReceiver} setPublicChat={this.setPublicChat} />
                     </div>                
                     <div className='w-80 flex flex-column justify-end'>
-                        <Messages publicMessages={publicMessages} privateMessages={privateMessages} user={user} isPublic={isPublic} />
+                        <Messages oppositeChatter={oppositeChatter} publicMessages={publicMessages} privateMessages={privateMessages}
+                                 activePrivateMessages={activePrivateMessages} user={user} isPublic={isPublic} popup={popup} />
                         <MessageInput setMessage={this.setMessage} userError={error} setTyping={this.setTyping} />
                     </div>               
                     
